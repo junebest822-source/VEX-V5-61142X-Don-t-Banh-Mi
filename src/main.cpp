@@ -32,11 +32,11 @@ lemlib::ControllerSettings lateral_controller(10, // proportional gain (kP)
 lemlib::ControllerSettings angular_controller(2, // proportional gain (kP)
                                               0, // integral gain (kI)
                                               10, // derivative gain (kD)
-                                              3, // anti windup
-                                              1, // small error range, in degrees
-                                              100, // small error range timeout, in milliseconds
-                                              3, // large error range, in degrees
-                                              500, // large error range timeout, in milliseconds
+                                              0, // anti windup
+                                              0, // small error range, in degrees
+                                              0, // small error range timeout, in milliseconds
+                                              0, // large error range, in degrees
+                                              0, // large error range timeout, in milliseconds
                                               0 // maximum acceleration (slew)
 );
 
@@ -160,11 +160,6 @@ void opcontrol() {
  * This should be used in conjunction with every autonomous and driver control place
  * basically speaking, you need multiple threads (yay.)
 */
-void tracking(){
-
-}
-
-int main(){
-    initialize();
-    competition_initialize();
-}
+// void tracking(){
+//     //i don't think we need this
+// }
