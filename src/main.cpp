@@ -2,7 +2,6 @@
 #include "lemlib/api.hpp"
 /**
  * A callback function for LLEMU's center button.
- *
  * When this callback is fired, it will toggle line 2 of the LCD text between
  * "I was pressed!" and nothing.
  */
@@ -92,18 +91,6 @@ void initialize() {
     // works, refer to the fmtlib docs
 
     // thread to for brain screen and position logging
-    pros::Task screenTask([&]() {
-        while (true) {
-            // print robot location to the brain screen
-            pros::lcd::print(0, "X: %f", chassis.getPose().x); // x
-            pros::lcd::print(1, "Y: %f", chassis.getPose().y); // y
-            pros::lcd::print(2, "Theta: %f", chassis.getPose().theta); // heading
-            // log position telemetry
-            lemlib::telemetrySink()->info("Chassis pose: {}", chassis.getPose());
-            // delay to save resources
-            pros::delay(50);
-        }
-    });
 }
 
 /**
