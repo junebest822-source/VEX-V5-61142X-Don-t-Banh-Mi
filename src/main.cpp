@@ -11,7 +11,7 @@
 pros::Controller master(pros::E_CONTROLLER_MASTER);
 pros::MotorGroup left_mg({-3, 4}, pros::MotorGearset::red);    // Creates a motor group with forwards ports 1 & 3 and reversed port 2
 pros::MotorGroup right_mg({1, -2}, pros::MotorGearset::red);  // Creates a motor group with forwards port 5 and reversed ports 4 & 6
-lemlib::Drivetrain drivetrain(&left_mg, &right_mg, 11.75, lemlib::Omniwheel::NEW_325, 100, 2);
+lemlib::Drivetrain drivetrain(&left_mg, &right_mg, 13.5, lemlib::Omniwheel::NEW_325, 100, 2);
 pros::Imu imu(17);
 pros::Rotation rotation_sensor(17);
 lemlib::TrackingWheel tracking_wheel(&rotation_sensor, lemlib::Omniwheel::NEW_2 , 2.72);
