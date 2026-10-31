@@ -1,10 +1,6 @@
 #include "main.h"
 #include "lemlib/api.hpp"
-/**
- * A callback function for LLEMU's center button.
- * When this callback is fired, it will toggle line 2 of the LCD text between
- * "I was pressed!" and nothing.
- */
+
 
  // some like config stuff that will be useful trust
 pros::Controller master(pros::E_CONTROLLER_MASTER);
@@ -60,13 +56,25 @@ lemlib::Chassis chassis(drivetrain,
                         &throttle_curve, 
                         &steer_curve
 );
-void on_center_button() {
-	static bool pressed = false;
-	pressed = !pressed;
-	if (pressed) {
-		pros::lcd::set_text(2, "I was pressed!");
-	} else {
-		pros::lcd::clear_line(2);
+
+/**
+ * A callback function for LLEMU's center button.
+ * When this callback is fired, it will toggle line 2 of the LCD text between
+ * "I was pressed!" and nothing.
+ */
+int autonomous_selector = 0;
+
+void on_right_button() {
+	autonomous_selector++;
+	if (autonomous_selector > 3) {
+		autonomous_selector = 0;
+	}
+}
+
+void on_left_button(){
+    autonomous_selector--;
+	if (autonomous_selector < 0) {
+		autonomous_selector = 3;
 	}
 }
 
@@ -77,10 +85,11 @@ void on_center_button() {
  * to keep execution time for this mode under a few seconds.
  */
 
-
 void initialize() {
 	pros::lcd::initialize(); // initialize brain screen
     chassis.calibrate(); // calibrate sensors
+    pros::lcd::register_btn0_cb(on_left_button); // register left button callback
+    pros::lcd::register_btn2_cb(on_right_button); // register right button callback
 
     // the default rate is 50. however, if you need to change the rate, you
     // can do the following.
@@ -132,8 +141,28 @@ void competition_initialize() {}
  * from where it left off.
  */
 void autonomous() {
-    chassis.setPose(0,0,0);
-    chassis.turnToHeading(90,1000000);
+    if(autonomous_selector == 0){
+        // run autonomous when team goal is right
+        chassis.setPose(0,0,0);
+        // go to team goal using movetopose function (but don't go fully, we need to match)
+        // set pose using distance sensor relative to the team goal
+        // cascade up
+        // move so that you are right next to the team goal
+        // cascade down
+    } 
+    else if(autonomous_selector == 1){
+        // run autonomous when team goal is left
+        chassis.setPose(0,0,0);
+        // same thing, but mirrored
+    } 
+    else if(autonomous_selector == 2){
+        // run autonomous skills code
+        chassis.setPose(0,0,0);
+    }
+    else{
+        // run maunal skills code
+        // uh why would you do anything in here its manual are we serious rn
+    }
 }
 
 /**
