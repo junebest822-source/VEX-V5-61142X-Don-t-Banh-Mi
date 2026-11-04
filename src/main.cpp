@@ -1,6 +1,12 @@
 #include "main.h"
 #include "lemlib/api.hpp"
 
+double float_abs(double x){
+    if(x < 0){
+        return -x;
+    }
+    return x;
+}
 
  // some like config stuff that will be useful trust
 pros::Controller master(pros::E_CONTROLLER_MASTER);
@@ -57,6 +63,10 @@ lemlib::Chassis chassis(drivetrain,
                         &steer_curve
 );
 
+pros::Distance left_distance_sensor();
+pros::Distance top_distance_sensor();
+pros::Distance right_distance_sensor();
+pros::Distance bottom_distance_sensor();
 /**
  * A callback function for LLEMU's right and left button.
  * It is for changing the autonomous section
@@ -141,18 +151,23 @@ void competition_initialize() {}
  */
 
 // these 4 variables are the distance between the distance sensors and the rotational center of the robot, which is where we set pose
-double left_sensor_distance_error;
-double top_sensor_distance_error;
-double right_sensor_distance_error;
-double bottom_sensor_distance_error;
+double left_sensor_distance_error = 13.5/2 + 0.875;
+double top_sensor_distance_error = 14.5/2 + 0.875;
+double right_sensor_distance_error = 13.5/2 + 0.875;
+double bottom_sensor_distance_error = 14.5/2 + 0.875;
 
 void autonomous() {
     if(autonomous_selector == 0){
         // run autonomous when team goal is right
-        chassis.setPose(0,0,0);
+        chassis.setPose(0, -60,0);
         // go to team goal using moveToPose function (but don't go fully, we need to match)
-        chassis.moveToPose(-20,23.11,270,2000, {.lead = 0.3});
-        // chassis.setPose()
+        chassis.moveToPose(-17,-47,270,1300, {.lead = 0.3});
+        chassis.waitUntilDone();
+        if(float_abs((left_distance_sensor.get() + left_sensor_distance_error) - 13) > 0.5 ){
+            // oh noes the robot is like wrong ;(
+            chassis.setPose(-17, , 270);
+            chassis.moveToPose(-17,-47,270,1300, {.lead = 0.3});
+        }
         // set pose using distance sensor relative to the team goal
         // cascade up
         // move so that you are right next to the team goal
@@ -160,10 +175,10 @@ void autonomous() {
     } 
     else if(autonomous_selector == 1){
         // run autonomous when team goal is left
-        chassis.setPose(0,0,0);
+        chassis.setPose(0, -60,0);
         // same thing, but mirrored
-        chassis.moveToPose(20,23.11,90,2000, {.lead = 0.3});
-    } 
+        chassis.moveToPose(17, -47, 90, 1300, {.lead = 0.3});
+    }
     else if(autonomous_selector == 2){
         // run autonomous skills code
         chassis.setPose(0,0,0);
