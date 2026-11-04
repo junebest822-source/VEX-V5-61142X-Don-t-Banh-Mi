@@ -58,9 +58,8 @@ lemlib::Chassis chassis(drivetrain,
 );
 
 /**
- * A callback function for LLEMU's center button.
- * When this callback is fired, it will toggle line 2 of the LCD text between
- * "I was pressed!" and nothing.
+ * A callback function for LLEMU's right and left button.
+ * It is for changing the autonomous section
  */
 int autonomous_selector = 0;
 
@@ -140,11 +139,20 @@ void competition_initialize() {}
  * will be stopped. Re-enabling the robot will restart the task, not re-start it
  * from where it left off.
  */
+
+// these 4 variables are the distance between the distance sensors and the rotational center of the robot, which is where we set pose
+double left_sensor_distance_error;
+double top_sensor_distance_error;
+double right_sensor_distance_error;
+double bottom_sensor_distance_error;
+
 void autonomous() {
     if(autonomous_selector == 0){
         // run autonomous when team goal is right
         chassis.setPose(0,0,0);
-        // go to team goal using movetopose function (but don't go fully, we need to match)
+        // go to team goal using moveToPose function (but don't go fully, we need to match)
+        chassis.moveToPose(-20,23.11,270,2000, {.lead = 0.3});
+        // chassis.setPose()
         // set pose using distance sensor relative to the team goal
         // cascade up
         // move so that you are right next to the team goal
@@ -154,6 +162,7 @@ void autonomous() {
         // run autonomous when team goal is left
         chassis.setPose(0,0,0);
         // same thing, but mirrored
+        chassis.moveToPose(20,23.11,90,2000, {.lead = 0.3});
     } 
     else if(autonomous_selector == 2){
         // run autonomous skills code
