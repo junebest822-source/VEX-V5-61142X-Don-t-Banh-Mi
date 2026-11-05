@@ -155,36 +155,60 @@ double left_sensor_distance_error = 13.5/2 + 0.875;
 double top_sensor_distance_error = 14.5/2 + 0.875;
 double right_sensor_distance_error = 13.5/2 + 0.875;
 double bottom_sensor_distance_error = 14.5/2 + 0.875;
+// the pneuneuneumatics
+pros::adi::Pneumatics piston('A', false);
 
 void autonomous() {
     if(autonomous_selector == 0){
-        // run autonomous when team goal is right
-        chassis.setPose(0, -60,0);
-        // go to team goal using moveToPose function (but don't go fully, we need to match)
-        chassis.moveToPose(-17,-47,270,1300, {.lead = 0.3});
-        chassis.waitUntilDone();
-        if(float_abs((left_distance_sensor.get() + left_sensor_distance_error) - 13) > 0.5 ){
-            // oh noes the robot is like wrong ;(
-            chassis.setPose(-17, , 270);
-            chassis.moveToPose(-17,-47,270,1300, {.lead = 0.3});
-        }
-        // set pose using distance sensor relative to the team goal
-        // cascade up
-        // move so that you are right next to the team goal
-        // cascade down
+        // run autonomous when team goal is left
+        chassis.arcade(50,0);
+        pros::delay(700);
+        // something in the lines of cascade up claw open or smth idk
+        // open intake
+        chassis.arcade(-50,0);
+        pros::delay(700);
+        // spin intake roller
+        // close claw
+        chassis.arcade(50,0);
+        pros::delay(700);
+        // cascade up claw open (again)
+        chassis.setPose(-23.55,-55.15,0);
+        chassis.moveToPoint(0,-65,1500);
     } 
     else if(autonomous_selector == 1){
-        // run autonomous when team goal is left
-        chassis.setPose(0, -60,0);
-        // same thing, but mirrored
-        chassis.moveToPose(17, -47, 90, 1300, {.lead = 0.3});
+        // run autonomous when team goal is right
+        chassis.arcade(50,0);
+        pros::delay(700);
+        // something in the lines of cascade up claw open or smth idk
+        // open intake
+        chassis.arcade(-50,0);
+        pros::delay(700);
+        // spin intake roller
+        // close claw
+        chassis.arcade(50,0);
+        pros::delay(700);
+        // cascade up claw open (again)
+        chassis.setPose(23.55,-55.15,0);
+        chassis.moveToPoint(0,-65,1500);
     }
     else if(autonomous_selector == 2){
-        // run autonomous skills code
-        chassis.setPose(0,0,0);
+        // run autonomous skills code (we start with team goal on left)
+        chassis.arcade(50,0);
+        pros::delay(700);
+        // something in the lines of cascade up claw open or smth idk
+        // open intake
+        chassis.arcade(-50,0);
+        pros::delay(700);
+        // spin intake roller
+        // close claw
+        chassis.arcade(50,0);
+        pros::delay(700);
+        // cascade up claw open (again)
+        chassis.setPose(-23.55,-55.15,0);
+        chassis.moveToPoint(0,-65,1500);
     }
     else{
-        // run maunal skills code
+        // run manual skills code
         // uh why would you do anything in here its manual are we serious rn
     }
 }
@@ -211,12 +235,12 @@ void opcontrol() {
 		                 (pros::lcd::read_buttons() & LCD_BTN_CENTER) >> 1,
 		                 (pros::lcd::read_buttons() & LCD_BTN_RIGHT) >> 0);  // Prints status of the emulated screen LCDs
 
-		// double curvature control scheme
+		// double arcade control scheme
 		int leftY = master.get_analog(pros::E_CONTROLLER_ANALOG_LEFT_Y);
         int rightX = master.get_analog(pros::E_CONTROLLER_ANALOG_RIGHT_X);
 
         // move the robot
-        chassis.curvature(leftY, rightX);
+        chassis.arcade(leftY, rightX);
 
         // delay to save resources
         pros::delay(20);                         // Run for 20 ms then update
