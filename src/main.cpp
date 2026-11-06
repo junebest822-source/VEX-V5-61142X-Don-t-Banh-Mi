@@ -156,24 +156,44 @@ double top_sensor_distance_error = 14.5/2 + 0.875;
 double right_sensor_distance_error = 13.5/2 + 0.875;
 double bottom_sensor_distance_error = 14.5/2 + 0.875;
 // the pneuneuneumatics
-pros::adi::Pneumatics piston('A', false);
-
+pros::adi::Pneumatics claw_piston('A', true); // piston that makes claw open and close, claw is closed when piston is extended
+pros::adi::Pneumatics intake_piston('A', false); // piston for the intake
+pros::adi::Pneumatics claw_piston2('A', false); // piston that makes the claw go up and down
 void autonomous() {
     if(autonomous_selector == 0){
         // run autonomous when team goal is left
         chassis.arcade(50,0);
-        pros::delay(700);
+        pros::delay(500);
+        chassis.arcade(0,0);
+        claw_piston2.extend();
+        pros::delay(300);
+        claw_piston.retract();
+        pros::delay(300);
+        claw_piston2.retract();
+        pros::delay(300);
         // something in the lines of cascade up claw open or smth idk
         // open intake
+        intake_piston.extend();
         chassis.arcade(-50,0);
         pros::delay(700);
         // spin intake roller
         // close claw
+        claw_piston.extend();
+        pros::delay(300);
         chassis.arcade(50,0);
-        pros::delay(700);
+        pros::delay(500);
+        chassis.arcade(0,0);
         // cascade up claw open (again)
+        claw_piston2.extend();
+        pros::delay(300);
+        claw_piston.retract();
+        pros::delay(300);
         chassis.setPose(-23.55,-55.15,0);
         chassis.moveToPoint(0,-65,1500);
+        chassis.waitUntilDone();
+        chassis.turnToHeading(0,1000);
+        chassis.moveToPoint(0,-60,1000);
+        chassis.moveToPoint(0,-68,1000);
     } 
     else if(autonomous_selector == 1){
         // run autonomous when team goal is right
@@ -181,13 +201,17 @@ void autonomous() {
         pros::delay(700);
         // something in the lines of cascade up claw open or smth idk
         // open intake
+        intake_piston.extend();
         chassis.arcade(-50,0);
         pros::delay(700);
         // spin intake roller
         // close claw
+        claw_piston.extend();
         chassis.arcade(50,0);
         pros::delay(700);
         // cascade up claw open (again)
+        claw_piston2.extend();
+        claw_piston.retract();
         chassis.setPose(23.55,-55.15,0);
         chassis.moveToPoint(0,-65,1500);
     }
