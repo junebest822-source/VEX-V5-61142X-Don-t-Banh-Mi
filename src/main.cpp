@@ -67,6 +67,22 @@ pros::Distance left_distance_sensor();
 pros::Distance top_distance_sensor();
 pros::Distance right_distance_sensor();
 pros::Distance bottom_distance_sensor();
+// these 4 variables are the distance between the distance sensors and the rotational center of the robot, which is where we set pose
+double left_sensor_distance_error = 13.5/2 + 0.875;
+double top_sensor_distance_error = 14.5/2 + 0.875;
+double right_sensor_distance_error = 13.5/2 + 0.875;
+double bottom_sensor_distance_error = 14.5/2 + 0.875;
+// the pneuneuneumatics
+pros::adi::Pneumatics claw_piston('A', true); // piston that makes claw open and close, claw is closed when piston is extended
+int claw_piston_state = 1; // 1 is closed, 0 is open
+pros::adi::Pneumatics intake_piston('A', false); // piston for the intake
+int intake_piston_state = 0; // 1 is extended, 0 is retracted
+pros::adi::Pneumatics claw_piston2('A', false); // piston that makes the claw go up and down
+int claw_piston2_state = 0; // 1 is extended, 0 is retracted
+// the motors for cascade and intake
+pros::Motor cascade_motor(5); // motor for cascade
+pros::Motor cascade_motor2(6); // motor for cascade
+pros::Motor intake_motor(7); // motor for intake
 /**
  * A callback function for LLEMU's right and left button.
  * It is for changing the autonomous section
@@ -99,7 +115,7 @@ void initialize() {
     chassis.calibrate(); // calibrate sensors
     pros::lcd::register_btn0_cb(on_left_button); // register left button callback
     pros::lcd::register_btn2_cb(on_right_button); // register right button callback
-
+    cascade_motor2.set_reversed(true); // reverse cascade motor 2
     // the default rate is 50. however, if you need to change the rate, you
     // can do the following.
     // lemlib::bufferedStdout().setRate(...);
@@ -150,86 +166,159 @@ void competition_initialize() {}
  * from where it left off.
  */
 
-// these 4 variables are the distance between the distance sensors and the rotational center of the robot, which is where we set pose
-double left_sensor_distance_error = 13.5/2 + 0.875;
-double top_sensor_distance_error = 14.5/2 + 0.875;
-double right_sensor_distance_error = 13.5/2 + 0.875;
-double bottom_sensor_distance_error = 14.5/2 + 0.875;
-// the pneuneuneumatics
-pros::adi::Pneumatics claw_piston('A', true); // piston that makes claw open and close, claw is closed when piston is extended
-pros::adi::Pneumatics intake_piston('A', false); // piston for the intake
-pros::adi::Pneumatics claw_piston2('A', false); // piston that makes the claw go up and down
 void autonomous() {
     if(autonomous_selector == 0){
         // run autonomous when team goal is left
-        chassis.arcade(50,0);
+        chassis.arcade(50,0); // go forward
         pros::delay(500);
-        chassis.arcade(0,0);
-        claw_piston2.extend();
+        chassis.arcade(0,0); // stop
+        claw_piston2.extend(); // claw up
+        claw_piston2_state = 1;
+        pros::delay(300); 
+        claw_piston.retract(); // claw open
+        claw_piston_state = 0;
         pros::delay(300);
-        claw_piston.retract();
+        claw_piston2.retract(); // claw down
+        claw_piston2_state = 0;
         pros::delay(300);
-        claw_piston2.retract();
-        pros::delay(300);
-        // something in the lines of cascade up claw open or smth idk
-        // open intake
-        intake_piston.extend();
-        chassis.arcade(-50,0);
+        intake_piston.extend(); // intake open
+        intake_piston_state = 1;
+        chassis.arcade(-50,0); // go back
         pros::delay(700);
+        chassis.arcade(0,0); // stop
         // spin intake roller
-        // close claw
-        claw_piston.extend();
+        intake_motor.move(127); // intake roller spin
+        pros::delay(800);
+        intake_motor.move(0); // intake roller stop
+        intake_piston.retract(); // intake close
+        intake_piston_state = 0;
         pros::delay(300);
-        chassis.arcade(50,0);
-        pros::delay(500);
-        chassis.arcade(0,0);
+        claw_piston.extend(); // claw close
+        claw_piston_state = 1;
+        pros::delay(300);
+        chassis.arcade(50,0); // go forward
+        pros::delay(800);
+        chassis.arcade(0,0); // stop
         // cascade up claw open (again)
-        claw_piston2.extend();
+        claw_piston2.extend(); // claw 
+        claw_piston2_state = 1;
         pros::delay(300);
-        claw_piston.retract();
+        cascade_motor.move_relative(200, 100); // cascade up
+        cascade_motor2.move_relative(200, 100); // cascade up
+         // cascade up
+        claw_piston.retract(); // claw open
+        claw_piston_state = 0;
         pros::delay(300);
         chassis.setPose(-23.55,-55.15,0);
-        chassis.moveToPoint(0,-65,1500);
+        claw_piston2.retract(); // claw down
+        claw_piston2_state = 0;
+        chassis.moveToPoint(0,-65,1500); // move to toggle, activating it once
         chassis.waitUntilDone();
-        chassis.turnToHeading(0,1000);
-        chassis.moveToPoint(0,-60,1000);
-        chassis.moveToPoint(0,-68,1000);
+        chassis.turnToHeading(0,1000); // turn to face front
+        chassis.moveToPoint(0,-60,1000); // move forward
+        chassis.moveToPoint(0,-68,1000); // move back, toggling toggle
     } 
     else if(autonomous_selector == 1){
         // run autonomous when team goal is right
-        chassis.arcade(50,0);
+        chassis.arcade(50,0); // go forward
+        pros::delay(500);
+        chassis.arcade(0,0); // stop
+        claw_piston2.extend(); // claw up
+        claw_piston2_state = 1;
+        pros::delay(300); 
+        claw_piston.retract(); // claw open
+        claw_piston_state = 0;
+        pros::delay(300);
+        claw_piston2.retract(); // claw down
+        claw_piston2_state = 0;
+        pros::delay(300);
+        intake_piston.extend(); // intake open
+        intake_piston_state = 1;
+        chassis.arcade(-50,0); // go back
         pros::delay(700);
-        // something in the lines of cascade up claw open or smth idk
-        // open intake
-        intake_piston.extend();
-        chassis.arcade(-50,0);
-        pros::delay(700);
+        chassis.arcade(0,0); // stop
         // spin intake roller
-        // close claw
-        claw_piston.extend();
-        chassis.arcade(50,0);
-        pros::delay(700);
+        intake_motor.move(127); // intake roller spin
+        pros::delay(800);
+        intake_motor.move(0); // intake roller stop
+        intake_piston.retract(); // intake close
+        intake_piston_state = 0;
+        pros::delay(300);
+        claw_piston.extend(); // claw close
+        claw_piston_state = 1;
+        pros::delay(300);
+        chassis.arcade(50,0); // go forward
+        pros::delay(800);
+        chassis.arcade(0,0); // stop
         // cascade up claw open (again)
-        claw_piston2.extend();
-        claw_piston.retract();
+        claw_piston2.extend(); // claw 
+        claw_piston2_state = 1;
+        pros::delay(300);
+        cascade_motor.move_relative(200, 100); // cascade up
+        cascade_motor2.move_relative(200, 100); // cascade up
+         // cascade up
+        claw_piston.retract(); // claw open
+        claw_piston_state = 0;
+        pros::delay(300);
         chassis.setPose(23.55,-55.15,0);
-        chassis.moveToPoint(0,-65,1500);
+        claw_piston2.retract(); // claw down
+        claw_piston2_state = 0;
+        chassis.moveToPoint(0,-65,1500); // move to toggle, activating it once
+        chassis.waitUntilDone();
+        chassis.turnToHeading(0,1000); // turn to face front
+        chassis.moveToPoint(0,-60,1000); // move forward
+        chassis.moveToPoint(0,-68,1000); // move back, toggling toggle
     }
     else if(autonomous_selector == 2){
-        // run autonomous skills code (we start with team goal on left)
-        chassis.arcade(50,0);
+        // run autonomous skills code
+        chassis.arcade(50,0); // go forward
+        pros::delay(500);
+        chassis.arcade(0,0); // stop
+        claw_piston2.extend(); // claw up
+        claw_piston2_state = 1;
+        pros::delay(300); 
+        claw_piston.retract(); // claw open
+        claw_piston_state = 0;
+        pros::delay(300);
+        claw_piston2.retract(); // claw down
+        claw_piston2_state = 0;
+        pros::delay(300);
+        intake_piston.extend(); // intake open
+        intake_piston_state = 1;
+        chassis.arcade(-50,0); // go back
         pros::delay(700);
-        // something in the lines of cascade up claw open or smth idk
-        // open intake
-        chassis.arcade(-50,0);
-        pros::delay(700);
+        chassis.arcade(0,0); // stop
         // spin intake roller
-        // close claw
-        chassis.arcade(50,0);
-        pros::delay(700);
+        intake_motor.move(127); // intake roller spin
+        pros::delay(800);
+        intake_motor.move(0); // intake roller stop
+        intake_piston.retract(); // intake close
+        intake_piston_state = 0;
+        pros::delay(300);
+        claw_piston.extend(); // claw close
+        claw_piston_state = 1;
+        pros::delay(300);
+        chassis.arcade(50,0); // go forward
+        pros::delay(800);
+        chassis.arcade(0,0); // stop
         // cascade up claw open (again)
+        claw_piston2.extend(); // claw 
+        claw_piston2_state = 1;
+        pros::delay(300);
+        cascade_motor.move_relative(200, 100); // cascade up
+        cascade_motor2.move_relative(200, 100); // cascade up
+         // cascade up
+        claw_piston.retract(); // claw open
+        claw_piston_state = 0;
+        pros::delay(300);
         chassis.setPose(-23.55,-55.15,0);
-        chassis.moveToPoint(0,-65,1500);
+        claw_piston2.retract(); // claw down
+        claw_piston2_state = 0;
+        chassis.moveToPoint(0,-65,1500); // move to toggle, activating it once
+        chassis.waitUntilDone();
+        chassis.turnToHeading(0,1000); // turn to face front
+        chassis.moveToPoint(0,-60,1000); // move forward
+        chassis.moveToPoint(0,-68,1000); // move back, toggling toggle
     }
     else{
         // run manual skills code
@@ -253,7 +342,6 @@ void autonomous() {
 void opcontrol() {
 
 
-
 	while (true) {
 		pros::lcd::print(0, "%d %d %d", (pros::lcd::read_buttons() & LCD_BTN_LEFT) >> 2,
 		                 (pros::lcd::read_buttons() & LCD_BTN_CENTER) >> 1,
@@ -262,12 +350,73 @@ void opcontrol() {
 		// double arcade control scheme
 		int leftY = master.get_analog(pros::E_CONTROLLER_ANALOG_LEFT_Y);
         int rightX = master.get_analog(pros::E_CONTROLLER_ANALOG_RIGHT_X);
-
-        // move the robot
         chassis.arcade(leftY, rightX);
-
+        pros::Task screenTask{[&]() {
+        while (true) {
+            int macro = 0;
+            if(master.get_digital(pros::E_CONTROLLER_DIGITAL_R1)){
+                if(macro == 0){
+                    macro++;
+                }
+            }
+            if(master.get_digital(pros::E_CONTROLLER_DIGITAL_L1)){
+                if(macro == 0){
+                    macro--;
+                }
+            }
+            if(macro == 1){
+                cascade_motor.move_relative(200, 100); // cascade up
+                cascade_motor2.move_relative(200, 100); // cascade up
+                chassis.waitUntilDone();
+                macro = 0;
+            }
+            else if(macro == -1){
+                cascade_motor.move_relative(-200, 100); // cascade up
+                cascade_motor2.move_relative(-200, 100); // cascade up
+                chassis.waitUntilDone();
+                macro = 0;
+            }
+            pros::delay(15);
+        }
+        }};
+        if(master.get_digital(pros::E_CONTROLLER_DIGITAL_B)){
+            if(claw_piston_state == 1){
+                claw_piston.retract(); // claw open
+                claw_piston_state = 0;
+            }
+            else{
+                claw_piston.extend(); // claw close
+                claw_piston_state = 1;
+            }
+        }
+        if(master.get_digital(pros::E_CONTROLLER_DIGITAL_R2)){
+            intake_motor.move(127); // intake roller spin
+        }
+        if(master.get_digital(pros::E_CONTROLLER_DIGITAL_L2)){
+            intake_motor.move(-127); // intake roller spin reverse aka outtake
+        }
+        if(master.get_digital(pros::E_CONTROLLER_DIGITAL_A)){
+            if(claw_piston2_state == 1){
+                claw_piston2.retract(); // claw down
+                claw_piston2_state = 0;
+            }
+            else{
+                claw_piston2.extend(); // claw up
+                claw_piston2_state = 1;
+            }
+        }
+        if(master.get_digital(pros::E_CONTROLLER_DIGITAL_X)){
+            if(intake_piston_state == 1){
+                intake_piston.retract(); // intake close
+                intake_piston_state = 0;
+            }
+            else{
+                intake_piston.extend(); // intake open
+                intake_piston_state = 1;
+            }
+        }
         // delay to save resources
-        pros::delay(20);                         // Run for 20 ms then update
+        pros::delay(15);                         // Run for 5 ms then update
 	}
 }
 
