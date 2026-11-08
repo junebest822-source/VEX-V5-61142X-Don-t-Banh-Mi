@@ -1,81 +1,89 @@
 #include "main.h"
 #include "lemlib/api.hpp"
 #include "pros/llemu.hpp"
- // some like config stuff that will be useful trust
+// some like config stuff that will be useful trust
 pros::Controller master(pros::E_CONTROLLER_MASTER);
-pros::MotorGroup left_mg({-8, 7}, pros::MotorGearset::blue);    // Creates a motor group with forwards ports 1 & 3 and reversed port 2
-pros::MotorGroup right_mg({9, -10}, pros::MotorGearset::blue);  // Creates a motor group with forwards port 5 and reversed ports 4 & 6
-lemlib::Drivetrain drivetrain(&left_mg, &right_mg, 13.5, lemlib::Omniwheel::NEW_325, 100, 2);
+pros::MotorGroup
+    left_mg({-8, -7},
+            pros::MotorGearset::blue); // Left: port 8 reversed, port 7 normal
+pros::MotorGroup right_mg(
+    {9, 10},
+    pros::MotorGearset::blue); // Right: port 9 normal, port 10 reversed
+lemlib::Drivetrain drivetrain(&left_mg, &right_mg, 13.5,
+                              lemlib::Omniwheel::NEW_325, 100, 2);
 pros::Imu imu(11);
 pros::Rotation rotation_sensor(5);
-lemlib::TrackingWheel tracking_wheel(&rotation_sensor, lemlib::Omniwheel::NEW_2 , -0.5);
-lemlib::OdomSensors sensors(&tracking_wheel,nullptr,nullptr,nullptr, &imu);
+lemlib::TrackingWheel tracking_wheel(&rotation_sensor, lemlib::Omniwheel::NEW_2,
+                                     -0.5);
+lemlib::OdomSensors sensors(&tracking_wheel, nullptr, nullptr, nullptr, &imu);
 // lateral PID controller
-lemlib::ControllerSettings lateral_controller(10, // proportional gain (kP)
-                                            0, // integral gain (kI)
-                                            3, // derivative gain (kD)
-                                            3, // anti windup
-                                            1, // small error range, in inches
-                                            100, // small error range timeout, in milliseconds
-                                            3, // large error range, in inches
-                                            500, // large error range timeout, in milliseconds
-                                            20 // maximum acceleration (slew)
-);
+lemlib::ControllerSettings
+    lateral_controller(10,  // proportional gain (kP)
+                       0,   // integral gain (kI)
+                       3,   // derivative gain (kD)
+                       3,   // anti windup
+                       1,   // smfall error range, in inches
+                       100, // small error range timeout, in milliseconds
+                       3,   // large error range, in inches
+                       500, // large error range timeout, in milliseconds
+                       20   // maximum acceleration (slew)
+    );
 
 // angular motion controller
-lemlib::ControllerSettings angular_controller(2, // proportional gain (kP)
-                                             0, // integral gain (kI)
-                                             10, // derivative gain (kD)
-                                             3, // anti windup
-                                             1, // small error range, in degrees
-                                             100, // small error range timeout, in milliseconds
-                                             3, // large error range, in degrees
-                                             500, // large error range timeout, in milliseconds
-                                             0 // maximum acceleration (slew)
-);
-
+lemlib::ControllerSettings
+    angular_controller(2,   // proportional gain (kP)
+                       0,   // integral gain (kI)
+                       10,  // derivative gain (kD)
+                       3,   // anti windup
+                       1,   // small error range, in degrees
+                       100, // small error range timeout, in milliseconds
+                       3,   // large error range, in degrees
+                       500, // large error range timeout, in milliseconds
+                       0    // maximum acceleration (slew)
+    );
 
 // input curve for throttle input during driver control
-lemlib::ExpoDriveCurve throttle_curve(3, // joystick deadband out of 127
-                                     10, // minimum output where drivetrain will move out of 127
-                                     1.019 // expo curve gain
-);
+lemlib::ExpoDriveCurve
+    throttle_curve(3,    // joystick deadband out of 127
+                   10,   // minimum output where drivetrain will move out of 127
+                   1.019 // expo curve gain
+    );
 
 // input curve for steer input during driver control
-lemlib::ExpoDriveCurve steer_curve(3, // joystick deadband out of 127
-                                  10, // minimum output where drivetrain will move out of 127
-                                  1.019 // expo curve gain
-);
+lemlib::ExpoDriveCurve
+    steer_curve(3,    // joystick deadband out of 127
+                10,   // minimum output where drivetrain will move out of 127
+                1.019 // expo curve gain
+    );
 
 // create the chassis
-lemlib::Chassis chassis(drivetrain,
-                        lateral_controller,
-                        angular_controller,
-                        sensors,
-                        &throttle_curve, 
-                        &steer_curve
-);
+lemlib::Chassis chassis(drivetrain, lateral_controller, angular_controller,
+                        sensors, &throttle_curve, &steer_curve);
 
 pros::Distance left_distance_sensor();
 pros::Distance top_distance_sensor();
 pros::Distance right_distance_sensor();
 pros::Distance bottom_distance_sensor();
-// these 4 variables are the distance between the distance sensors and the rotational center of the robot, which is where we set pose
-double left_sensor_distance_error = 13.5/2 + 0.875;
-double top_sensor_distance_error = 14.5/2 + 0.875;
-double right_sensor_distance_error = 13.5/2 + 0.875;
-double bottom_sensor_distance_error = 14.5/2 + 0.875;
+// these 4 variables are the distance between the distance sensors and the
+// rotational center of the robot, which is where we set pose
+double left_sensor_distance_error = 13.5 / 2 + 0.875;
+double top_sensor_distance_error = 14.5 / 2 + 0.875;
+double right_sensor_distance_error = 13.5 / 2 + 0.875;
+double bottom_sensor_distance_error = 14.5 / 2 + 0.875;
 // the pneuneuneumatics
-pros::adi::Pneumatics claw_piston('B', false); // piston that makes claw open and close, claw is closed when piston is extended
-int claw_piston_state = 1; // 1 is closed, 0 is open
+pros::adi::Pneumatics
+    claw_piston('B', true); // piston that makes claw open and close, claw is
+                            // closed when piston is extended
+int claw_piston_state = 1;  // 1 is closed, 0 is open; starts retracted
 // pros::adi::Pneumatics intake_piston('H', false); // piston for the intake
 // int intake_piston_state = 0; // 1 is extended, 0 is retracted
-pros::adi::Pneumatics claw_piston2('C', false); // piston that makes the claw go up and down
-int claw_piston2_state = 0; // 1 is extended, 0 is retracted
+pros::adi::Pneumatics
+    claw_piston2('A', false); // piston that makes the claw go up and down
+int claw_piston2_state = 0;   // 1 is extended, 0 is retracted
 // the motors for cascade and intake
-pros::Motor cascade_motor(15); // motor for cascade
-pros::Motor cascade_motor2(14); // motor for cascade
-pros::Motor intake_motor(1); // motor for intake
+pros::Motor cascade_motor(15);  // motor for cascade
+pros::Motor cascade_motor2(12); // motor for cascade
+pros::Motor intake_motor(2);    // motor for intake
 /**
  * A callback function for LLEMU's right and left button.
  * It is for changing the autonomous section
@@ -83,17 +91,17 @@ pros::Motor intake_motor(1); // motor for intake
 int autonomous_selector = 0;
 
 void on_right_button() {
-	autonomous_selector++;
-	if (autonomous_selector > 3) {
-		autonomous_selector = 0;
-	}
+  autonomous_selector++;
+  if (autonomous_selector > 3) {
+    autonomous_selector = 0;
+  }
 }
 
-void on_left_button(){
-    autonomous_selector--;
-	if (autonomous_selector < 0) {
-		autonomous_selector = 3;
-	}
+void on_left_button() {
+  autonomous_selector--;
+  if (autonomous_selector < 0) {
+    autonomous_selector = 3;
+  }
 }
 
 /**
@@ -104,32 +112,36 @@ void on_left_button(){
  */
 
 void initialize() {
-	pros::lcd::initialize(); // initialize brain screen
-    chassis.calibrate(); // calibrate sensors
-    pros::lcd::register_btn0_cb(on_left_button); // register left button callback
-    pros::lcd::register_btn2_cb(on_right_button); // register right button callback
-    cascade_motor2.set_reversed(true); // reverse cascade motor 2
-    intake_motor.set_gearing(pros::MotorGearset::blue); // set intake 
-    cascade_motor.set_gearing(pros::MotorGearset::green); // set cascade
-    cascade_motor2.set_gearing(pros::MotorGearset::green); // set cascade
-    // the default rate is 50. however, if you need to change the rate, you
-    // can do the following.
-    // lemlib::bufferedStdout().setRate(...);
-    // If you use bluetooth or a wired connection, you will want to have a rate of 10ms
+  pros::lcd::initialize();                     // initialize brain screen
+  chassis.calibrate();                         // calibrate sensors
+  pros::lcd::register_btn0_cb(on_left_button); // register left button callback
+  pros::lcd::register_btn2_cb(
+      on_right_button);              // register right button callback
+  cascade_motor2.set_reversed(true); // reverse cascade motor 2
+  cascade_motor.set_brake_mode(pros::E_MOTOR_BRAKE_HOLD);
+  cascade_motor2.set_brake_mode(pros::E_MOTOR_BRAKE_HOLD);
+  intake_motor.set_gearing(pros::MotorGearset::blue);    // set intake
+  cascade_motor.set_gearing(pros::MotorGearset::green);  // set cascade
+  cascade_motor2.set_gearing(pros::MotorGearset::green); // set cascade
+  // the default rate is 50. however, if you need to change the rate, you
+  // can do the following.
+  // lemlib::bufferedStdout().setRate(...);
+  // If you use bluetooth or a wired connection, you will want to have a rate of
+  // 10ms
 
-    // for more information on how the formatting for the loggers
-    // works, refer to the fmtlib docs
+  // for more information on how the formatting for the loggers
+  // works, refer to the fmtlib docs
 
-    // thread to for brain screen and position logging
-    // pros::Task screenTask([&]() {
-    //     while (true) {
-    //         // print robot location to the brain screen
-    //         pros::lcd::print(0, "X: %f", chassis.getPose().x); // x
-    //         pros::lcd::print(1, "Y: %f", chassis.getPose().y); // y
-    //         pros::lcd::print(2, "Theta: %f", chassis.getPose().theta); // heading
-    //         pros::delay(500);
-    //     }
-    // });
+  // thread to for brain screen and position logging
+  // pros::Task screenTask([&]() {
+  //     while (true) {
+  //         // print robot location to the brain screen
+  //         pros::lcd::print(0, "X: %f", chassis.getPose().x); // x
+  //         pros::lcd::print(1, "Y: %f", chassis.getPose().y); // y
+  //         pros::lcd::print(2, "Theta: %f", chassis.getPose().theta); //
+  //         heading pros::delay(500);
+  //     }
+  // });
 }
 
 /**
@@ -137,7 +149,7 @@ void initialize() {
  * the VEX Competition Switch, following either autonomous or opcontrol. When
  * the robot is enabled, this task will exit.
  */
-void disabled() {}
+void disabled() { pros::lcd::set_text(0, "DISABLED: motor output off"); }
 
 /**
  * Runs after initialize(), and before autonomous when connected to the Field
@@ -163,184 +175,189 @@ void competition_initialize() {}
  */
 
 void autonomous() {
-    if(autonomous_selector == 0){
-        // run autonomous when team goal is left
-        claw_piston.extend(); // claw up + close
-        claw_piston_state = 1;
-        pros::delay(300);
-        chassis.arcade(50,0); // go forward
-        pros::delay(500);
-        chassis.arcade(0,0); // stop
-        claw_piston2.extend(); // claw up
-        claw_piston2_state = 1;
-        pros::delay(300); 
-        claw_piston.retract(); // claw open
-        claw_piston_state = 0;
-        pros::delay(300);
-        claw_piston2.retract(); // claw down
-        claw_piston2_state = 0;
-        pros::delay(300);
-        // intake_piston.extend(); // intake open
-        // intake_piston_state = 1;
-        chassis.arcade(-50,0); // go back
-        pros::delay(700);
-        chassis.arcade(0,0); // stop
-        // spin intake roller
-        intake_motor.move(70); // intake roller spin
-        pros::delay(800);
-        intake_motor.move(0); // intake roller stop
-        // intake_piston.retract(); // intake close
-        // intake_piston_state = 0;
-        pros::delay(300);
-        claw_piston.extend(); // claw close
-        claw_piston_state = 1;
-        pros::delay(300);
-        cascade_motor.move_absolute(200, 100); // cascade up
-        cascade_motor2.move_absolute(200, 100); // cascade up
-        pros::delay(700);
-        chassis.arcade(50,0); // go forward
-        pros::delay(800);
-        chassis.arcade(0,0); // stop
-        // cascade up claw open (again)
-        claw_piston2.extend(); // claw up
-        claw_piston2_state = 1;
-        pros::delay(300);
-        claw_piston.retract(); // claw open
-        claw_piston_state = 0;
-        pros::delay(300);
-        chassis.setPose(-23.55,-55.15,0);
-        claw_piston2.retract(); // claw down
-        claw_piston2_state = 0;
-        pros::delay(300);
-        cascade_motor.move_absolute(0, 100); // cascade down
-        cascade_motor2.move_absolute(0, 100); // cascade down
-        pros::delay(700);
-        chassis.moveToPoint(0,-65,1500); // move to toggle, activating it once
-        chassis.waitUntilDone();
-        chassis.turnToHeading(0,1000); // turn to face front
-        chassis.moveToPoint(0,-60,1000); // move forward
-        chassis.moveToPoint(0,-68,1000); // move back, toggling toggle
-    } 
-    else if(autonomous_selector == 1){
-        // run autonomous when team goal is right
-        claw_piston.extend(); // claw up + close
-        claw_piston_state = 1;
-        pros::delay(300);
-        chassis.arcade(50,0); // go forward
-        pros::delay(500);
-        chassis.arcade(0,0); // stop
-        claw_piston2.extend(); // claw up
-        claw_piston2_state = 1;
-        pros::delay(300); 
-        claw_piston.retract(); // claw open
-        claw_piston_state = 0;
-        pros::delay(300);
-        claw_piston2.retract(); // claw down
-        claw_piston2_state = 0;
-        pros::delay(300);
-        // intake_piston.extend(); // intake open
-        // intake_piston_state = 1;
-        chassis.arcade(-50,0); // go back
-        pros::delay(700);
-        chassis.arcade(0,0); // stop
-        // spin intake roller
-        intake_motor.move(70); // intake roller spin
-        pros::delay(800);
-        intake_motor.move(0); // intake roller stop
-        // intake_piston.retract(); // intake close
-        // intake_piston_state = 0;
-        pros::delay(300);
-        claw_piston.extend(); // claw close
-        claw_piston_state = 1;
-        pros::delay(300);
-        cascade_motor.move_absolute(200, 100); // cascade up
-        cascade_motor2.move_absolute(200, 100); // cascade up
-        pros::delay(700);
-        chassis.arcade(50,0); // go forward
-        pros::delay(800);
-        chassis.arcade(0,0); // stop
-        // cascade up claw open (again)
-        claw_piston2.extend(); // claw up
-        claw_piston2_state = 1;
-        pros::delay(300);
-        claw_piston.retract(); // claw open
-        claw_piston_state = 0;
-        pros::delay(300);
-        chassis.setPose(23.55,-55.15,0);
-        claw_piston2.retract(); // claw down
-        claw_piston2_state = 0;
-        pros::delay(300);
-        cascade_motor.move_absolute(0, 100); // cascade down
-        cascade_motor2.move_absolute(0, 100); // cascade down
-        pros::delay(700);
-        chassis.moveToPoint(0,-65,1500); // move to toggle, activating it once
-        chassis.waitUntilDone();
-        chassis.turnToHeading(0,1000); // turn to face front
-        chassis.moveToPoint(0,-60,1000); // move forward
-        chassis.moveToPoint(0,-68,1000); // move back, toggling toggle
-    }
-    else if(autonomous_selector == 2){
-        // run autonomous skills code
-        claw_piston.extend(); // claw up + close
-        claw_piston_state = 1;
-        pros::delay(300);
-        chassis.arcade(50,0); // go forward
-        pros::delay(500);
-        chassis.arcade(0,0); // stop
-        claw_piston2.extend(); // claw up
-        claw_piston2_state = 1;
-        pros::delay(300); 
-        claw_piston.retract(); // claw open
-        claw_piston_state = 0;
-        pros::delay(300);
-        claw_piston2.retract(); // claw down
-        claw_piston2_state = 0;
-        pros::delay(300);
-        // intake_piston.extend(); // intake open
-        // intake_piston_state = 1;
-        chassis.arcade(-50,0); // go back
-        pros::delay(700);
-        chassis.arcade(0,0); // stop
-        // spin intake roller
-        intake_motor.move(70); // intake roller spin
-        pros::delay(800);
-        intake_motor.move(0); // intake roller stop
-        // intake_piston.retract(); // intake close
-        // intake_piston_state = 0;
-        pros::delay(300);
-        claw_piston.extend(); // claw close
-        claw_piston_state = 1;
-        pros::delay(300);
-        cascade_motor.move_absolute(200, 100); // cascade up
-        cascade_motor2.move_absolute(200, 100); // cascade up
-        pros::delay(700);
-        chassis.arcade(50,0); // go forward
-        pros::delay(800);
-        chassis.arcade(0,0); // stop
-        // cascade up claw open (again)
-        claw_piston2.extend(); // claw up
-        claw_piston2_state = 1;
-        pros::delay(300);
-        claw_piston.retract(); // claw open
-        claw_piston_state = 0;
-        pros::delay(300);
-        chassis.setPose(-23.55,-55.15,0);
-        claw_piston2.retract(); // claw down
-        claw_piston2_state = 0;
-        pros::delay(300);
-        cascade_motor.move_absolute(0, 100); // cascade down
-        cascade_motor2.move_absolute(0, 100); // cascade down
-        pros::delay(700);
-        chassis.moveToPoint(0,-65,1500); // move to toggle, activating it once
-        chassis.waitUntilDone();
-        chassis.turnToHeading(0,1000); // turn to face front
-        chassis.moveToPoint(0,-60,1000); // move forward
-        chassis.moveToPoint(0,-68,1000); // move back, toggling toggle
-    }
-    else{
-        // run manual skills code
-        // uh why would you do anything in here its manual are we serious rn
-    }
+  pros::lcd::set_text(0, "AUTONOMOUS running");
+  if (autonomous_selector == 0) {
+    // run autonomous when team goal is left
+    // claw_piston.extend(); // claw up + close
+    // claw_piston_state = 1;
+    // pros::delay(300);
+    // chassis.arcade(50,0); // go forward
+    // pros::delay(500);
+    // chassis.arcade(0,0); // stop
+    // claw_piston2.extend(); // claw up
+    // claw_piston2_state = 1;
+    // pros::delay(300);
+    // claw_piston.retract(); // claw open
+    // claw_piston_state = 0;
+    // pros::delay(300);
+    // claw_piston2.retract(); // claw down
+    // claw_piston2_state = 0;
+    // pros::delay(300);
+    // intake_piston.extend(); // intake open
+    // intake_piston_state = 1;
+    // chassis.arcade(-50,0); // go back
+    // pros::delay(700);
+    // chassis.arcade(0,0); // stop
+    // // spin intake roller
+    // intake_motor.move(70); // intake roller spin
+    // pros::delay(800);
+    // intake_motor.move(0); // intake roller stop
+    // // intake_piston.retract(); // intake close
+    // // intake_piston_state = 0;
+    // pros::delay(300);
+    // claw_piston.extend(); // claw close
+    // claw_piston_state = 1;
+    // pros::delay(300);
+    // cascade_motor.move_absolute(200, 100); // cascade up
+    // cascade_motor2.move_absolute(200, 100); // cascade up
+    // pros::delay(700);
+    // chassis.arcade(50,0); // go forward
+    // pros::delay(800);
+    // chassis.arcade(0,0); // stop
+    // // cascade up claw open (again)
+    // claw_piston2.extend(); // claw up
+    // claw_piston2_state = 1;
+    // pros::delay(300);
+    // claw_piston.retract(); // claw open
+    // claw_piston_state = 0;
+    // pros::delay(300);
+    // chassis.setPose(-23.55,-55.15,0);
+    // claw_piston2.retract(); // claw down
+    // claw_piston2_state = 0;
+    // pros::delay(300);
+    // cascade_motor.move_absolute(0, 100); // cascade down
+    // cascade_motor2.move_absolute(0, 100); // cascade down
+    // pros::delay(700);
+    // chassis.moveToPoint(0,-65,1500); // move to toggle, activating it once
+    // chassis.waitUntilDone();
+    // chassis.turnToHeading(0,1000); // turn to face front
+    // chassis.moveToPoint(0,-60,1000); // move forward
+    // chassis.moveToPoint(0,-68,1000); // move back, toggling toggle
+    chassis.setPose(0, -75, 0);
+    chassis.moveToPose(-23.55, -66, 270, 1500);
+    claw_piston.toggle();
+    pros::delay(600);
+    claw_piston2.toggle();
+    pros::delay(600);
+
+  } else if (autonomous_selector == 1) {
+    // run autonomous when team goal is right
+    // claw_piston.extend(); // claw up + close
+    // claw_piston_state = 1;
+    // pros::delay(300);
+    // chassis.arcade(50,0); // go forward
+    // pros::delay(500);
+    // chassis.arcade(0,0); // stop
+    // claw_piston2.extend(); // claw up
+    // claw_piston2_state = 1;
+    // pros::delay(300);
+    // claw_piston.retract(); // claw open
+    // claw_piston_state = 0;
+    // pros::delay(300);
+    // claw_piston2.retract(); // claw down
+    // claw_piston2_state = 0;
+    // pros::delay(300);
+    // // intake_piston.extend(); // intake open
+    // // intake_piston_state = 1;
+    // chassis.arcade(-50,0); // go back
+    // pros::delay(700);
+    // chassis.arcade(0,0); // stop
+    // // spin intake roller
+    // intake_motor.move(70); // intake roller spin
+    // pros::delay(800);
+    // intake_motor.move(0); // intake roller stop
+    // // intake_piston.retract(); // intake close
+    // // intake_piston_state = 0;
+    // pros::delay(300);
+    // claw_piston.extend(); // claw close
+    // claw_piston_state = 1;
+    // pros::delay(300);
+    // cascade_motor.move_absolute(200, 100); // cascade up
+    // cascade_motor2.move_absolute(200, 100); // cascade up
+    // pros::delay(700);
+    // chassis.arcade(50,0); // go forward
+    // pros::delay(800);
+    // chassis.arcade(0,0); // stop
+    // // cascade up claw open (again)
+    // claw_piston2.extend(); // claw up
+    // claw_piston2_state = 1;
+    // pros::delay(300);
+    // claw_piston.retract(); // claw open
+    // claw_piston_state = 0;
+    // pros::delay(300);
+    // chassis.setPose(23.55,-55.15,0);
+    // claw_piston2.retract(); // claw down
+    // claw_piston2_state = 0;
+    // pros::delay(300);
+    // cascade_motor.move_absolute(0, 100); // cascade down
+    // cascade_motor2.move_absolute(0, 100); // cascade down
+    // pros::delay(700);
+    // chassis.moveToPoint(0,-65,1500); // move to toggle, activating it once
+    // chassis.waitUntilDone();
+    // chassis.turnToHeading(0,1000); // turn to face front
+    // chassis.moveToPoint(0,-60,1000); // move forward
+    // chassis.moveToPoint(0,-68,1000); // move back, toggling toggle
+  } else if (autonomous_selector == 2) {
+    // run autonomous skills code
+    // claw_piston.extend(); // claw up + close
+    // claw_piston_state = 1;
+    // pros::delay(300);
+    // chassis.arcade(50,0); // go forward
+    // pros::delay(500);
+    // chassis.arcade(0,0); // stop
+    // claw_piston2.extend(); // claw up
+    // claw_piston2_state = 1;
+    // pros::delay(300);
+    // claw_piston.retract(); // claw open
+    // claw_piston_state = 0;
+    // pros::delay(300);
+    // claw_piston2.retract(); // claw down
+    // claw_piston2_state = 0;
+    // pros::delay(300);
+    // // intake_piston.extend(); // intake open
+    // // intake_piston_state = 1;
+    // chassis.arcade(-50,0); // go back
+    // pros::delay(700);
+    // chassis.arcade(0,0); // stop
+    // // spin intake roller
+    // intake_motor.move(70); // intake roller spin
+    // pros::delay(800);
+    // intake_motor.move(0); // intake roller stop
+    // // intake_piston.retract(); // intake close
+    // // intake_piston_state = 0;
+    // pros::delay(300);
+    // claw_piston.extend(); // claw close
+    // claw_piston_state = 1;
+    // pros::delay(300);
+    // cascade_motor.move_absolute(200, 100); // cascade up
+    // cascade_motor2.move_absolute(200, 100); // cascade up
+    // pros::delay(700);
+    // chassis.arcade(50,0); // go forward
+    // pros::delay(800);
+    // chassis.arcade(0,0); // stop
+    // // cascade up claw open (again)
+    // claw_piston2.extend(); // claw up
+    // claw_piston2_state = 1;
+    // pros::delay(300);
+    // claw_piston.retract(); // claw open
+    // claw_piston_state = 0;
+    // pros::delay(300);
+    // chassis.setPose(-23.55,-55.15,0);
+    // claw_piston2.retract(); // claw down
+    // claw_piston2_state = 0;
+    // pros::delay(300);
+    // cascade_motor.move_absolute(0, 100); // cascade down
+    // cascade_motor2.move_absolute(0, 100); // cascade down
+    // pros::delay(700);
+    // chassis.moveToPoint(0,-65,1500); // move to toggle, activating it once
+    // chassis.waitUntilDone();
+    // chassis.turnToHeading(0,1000); // turn to face front
+    // chassis.moveToPoint(0,-60,1000); // move forward
+    // chassis.moveToPoint(0,-68,1000); // move back, toggling toggle
+  } else {
+    // run manual skills code
+    // uh why would you do anything in here its manual are we serious rn
+  }
 }
 
 /**
@@ -357,79 +374,72 @@ void autonomous() {
  * task, not resume it from where it left off.
  */
 void opcontrol() {
+  // Autonomous can leave asynchronous LemLib motions queued.
+  chassis.cancelAllMotions();
+  chassis.arcade(0, 0);
 
+  const std::uint32_t driver_start = pros::millis();
+  int screen_ticks = 0;
+  while (true) {
+    // Split arcade: left stick forward/backward, right stick steering.
+    const int throttle = master.get_analog(pros::E_CONTROLLER_ANALOG_LEFT_Y);
+    const int turn = master.get_analog(pros::E_CONTROLLER_ANALOG_RIGHT_X);
+    chassis.arcade(throttle, turn);
 
-	while (true) {
-		// pros::lcd::print(0, "%d %d %d", (pros::lcd::read_buttons() & LCD_BTN_LEFT) >> 2,
-		//                  (pros::lcd::read_buttons() & LCD_BTN_CENTER) >> 1,
-		//                  (pros::lcd::read_buttons() & LCD_BTN_RIGHT) >> 0);  // Prints status of the emulated screen LCDs
+    // Hold R1 to raise the cascade; hold L1 to lower it.
+    int cascade_power = 0;
+    if (master.get_digital(pros::E_CONTROLLER_DIGITAL_R1)) {
+      cascade_power = 127;
+    } else if (master.get_digital(pros::E_CONTROLLER_DIGITAL_L1)) {
+      cascade_power = -127;
+    }
+    if (cascade_power == 0) {
+      cascade_motor.brake();
+      cascade_motor2.brake();
+    } else {
+      cascade_motor.move(cascade_power);
+      cascade_motor2.move(cascade_power);
+    }
 
-		// double arcade control scheme
-		int leftY = master.get_analog(pros::E_CONTROLLER_ANALOG_LEFT_Y);
-        int rightX = master.get_analog(pros::E_CONTROLLER_ANALOG_RIGHT_X);
-        chassis.arcade(leftY, rightX);
-        if(master.get_digital(pros::E_CONTROLLER_DIGITAL_R1)){
-            cascade_motor.move(60); // cascade up
-            cascade_motor2.move(60); // cascade up
-        }
-        else if(master.get_digital(pros::E_CONTROLLER_DIGITAL_L1)){
-            cascade_motor.move(-60); // cascade down
-            cascade_motor2.move(-60); // cascade down
-        }
-        else{
-            cascade_motor.move(0); // cascade stop
-            cascade_motor2.move(0); // cascade stop
-        }
-        if(master.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_B)){
-            if(claw_piston_state == 1){
-                claw_piston.retract(); // claw open
-                claw_piston_state = 0;
-            }
-            else{
-                claw_piston.extend(); // claw close
-                claw_piston_state = 1;
-            }
-        }
-        if(master.get_digital(pros::E_CONTROLLER_DIGITAL_R2)){
-            intake_motor.move(127); // intake roller spin
-        }
-        else if(master.get_digital(pros::E_CONTROLLER_DIGITAL_L2)){
-            intake_motor.move(-127); // intake roller spin reverse aka outtake
-        }
-        else{
-            intake_motor.move(0); // intake roller stop
-        }
-        if(master.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_A)){
-            if(claw_piston2_state == 1){
-                claw_piston2.retract(); // claw down
-                claw_piston2_state = 0;
-            }
-            else{
-                claw_piston2.extend(); // claw up
-                claw_piston2_state = 1;
-            }
-        }
-        // if(master.get_digital(pros::E_CONTROLLER_DIGITAL_X)){
-        //     if(intake_piston_state == 1){
-        //         intake_piston.retract(); // intake close
-        //         intake_piston_state = 0;
-        //     }
-        //     else{
-        //         intake_piston.extend(); // intake open
-        //         intake_piston_state = 1;
-        //     }
-        // }
-        // delay to save resources
-        pros::delay(15);                         // Run for 5 ms then update
-	}
+    // Hold R2 to intake; hold L2 to outtake.
+    int intake_power = 0;
+    if (master.get_digital(pros::E_CONTROLLER_DIGITAL_R2)) {
+      intake_power = 127;
+    } else if (master.get_digital(pros::E_CONTROLLER_DIGITAL_L2)) {
+      intake_power = -127;
+    }
+    intake_motor.move(intake_power);
+
+    // Toggle from the pneumatic's commanded state, including after autonomous.
+    if (master.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_B)) {
+      claw_piston.toggle();
+      claw_piston_state = claw_piston.is_extended();
+    }
+    if (master.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_A)) {
+      claw_piston2.toggle();
+      claw_piston2_state = claw_piston2.is_extended();
+    }
+
+    // Show that driver control is running and receiving joystick values.
+    if (screen_ticks == 0) {
+      pros::lcd::print(0, "Driver: controller %s",
+                       master.is_connected() ? "connected" : "disconnected");
+      pros::lcd::print(1, "LY: %4d RX: %4d", throttle, turn);
+      pros::lcd::print(
+          2, "Driver running: %lu s",
+          static_cast<unsigned long>((pros::millis() - driver_start) / 1000));
+    }
+    screen_ticks = (screen_ticks + 1) % 10;
+    pros::delay(20);
+  }
 }
 
 /*
  * This is the tracking algorithm that tracks the robot
  * its basically odomentry
- * This should be used in conjunction with every autonomous and driver control place
- * basically speaking, you need multiple threads (yay.)
-*/
+ * This should be used in conjunction with every autonomous and driver control
+ * place basically speaking, you need multiple threads (yay.)
+ */
 // void tracking(){
 //     //i don't think we need this
 // }
