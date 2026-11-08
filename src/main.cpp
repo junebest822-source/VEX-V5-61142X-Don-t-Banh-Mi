@@ -3,12 +3,12 @@
 #include "pros/llemu.hpp"
  // some like config stuff that will be useful trust
 pros::Controller master(pros::E_CONTROLLER_MASTER);
-pros::MotorGroup left_mg({-3, -4}, pros::MotorGearset::red);    // Creates a motor group with forwards ports 1 & 3 and reversed port 2
-pros::MotorGroup right_mg({1, 2}, pros::MotorGearset::red);  // Creates a motor group with forwards port 5 and reversed ports 4 & 6
+pros::MotorGroup left_mg({-8, 7}, pros::MotorGearset::blue);    // Creates a motor group with forwards ports 1 & 3 and reversed port 2
+pros::MotorGroup right_mg({9, -10}, pros::MotorGearset::blue);  // Creates a motor group with forwards port 5 and reversed ports 4 & 6
 lemlib::Drivetrain drivetrain(&left_mg, &right_mg, 13.5, lemlib::Omniwheel::NEW_325, 100, 2);
-pros::Imu imu(17);
-pros::Rotation rotation_sensor(18);
-lemlib::TrackingWheel tracking_wheel(&rotation_sensor, lemlib::Omniwheel::NEW_2 , 2.72);
+pros::Imu imu(11);
+pros::Rotation rotation_sensor(5);
+lemlib::TrackingWheel tracking_wheel(&rotation_sensor, lemlib::Omniwheel::NEW_2 , -0.5);
 lemlib::OdomSensors sensors(&tracking_wheel,nullptr,nullptr,nullptr, &imu);
 // lateral PID controller
 lemlib::ControllerSettings lateral_controller(10, // proportional gain (kP)
@@ -66,16 +66,16 @@ double top_sensor_distance_error = 14.5/2 + 0.875;
 double right_sensor_distance_error = 13.5/2 + 0.875;
 double bottom_sensor_distance_error = 14.5/2 + 0.875;
 // the pneuneuneumatics
-pros::adi::Pneumatics claw_piston('G', false); // piston that makes claw open and close, claw is closed when piston is extended
+pros::adi::Pneumatics claw_piston('B', false); // piston that makes claw open and close, claw is closed when piston is extended
 int claw_piston_state = 1; // 1 is closed, 0 is open
-pros::adi::Pneumatics intake_piston('H', false); // piston for the intake
-int intake_piston_state = 0; // 1 is extended, 0 is retracted
-// pros::adi::Pneumatics claw_piston2('A', false); // piston that makes the claw go up and down
-// int claw_piston2_state = 0; // 1 is extended, 0 is retracted
+// pros::adi::Pneumatics intake_piston('H', false); // piston for the intake
+// int intake_piston_state = 0; // 1 is extended, 0 is retracted
+pros::adi::Pneumatics claw_piston2('C', false); // piston that makes the claw go up and down
+int claw_piston2_state = 0; // 1 is extended, 0 is retracted
 // the motors for cascade and intake
-pros::Motor cascade_motor(5); // motor for cascade
-pros::Motor cascade_motor2(6); // motor for cascade
-pros::Motor intake_motor(7); // motor for intake
+pros::Motor cascade_motor(15); // motor for cascade
+pros::Motor cascade_motor2(14); // motor for cascade
+pros::Motor intake_motor(1); // motor for intake
 /**
  * A callback function for LLEMU's right and left button.
  * It is for changing the autonomous section
@@ -109,6 +109,9 @@ void initialize() {
     pros::lcd::register_btn0_cb(on_left_button); // register left button callback
     pros::lcd::register_btn2_cb(on_right_button); // register right button callback
     cascade_motor2.set_reversed(true); // reverse cascade motor 2
+    intake_motor.set_gearing(pros::MotorGearset::blue); // set intake 
+    cascade_motor.set_gearing(pros::MotorGearset::green); // set cascade
+    cascade_motor2.set_gearing(pros::MotorGearset::green); // set cascade
     // the default rate is 50. however, if you need to change the rate, you
     // can do the following.
     // lemlib::bufferedStdout().setRate(...);
@@ -118,15 +121,15 @@ void initialize() {
     // works, refer to the fmtlib docs
 
     // thread to for brain screen and position logging
-    pros::Task screenTask([&]() {
-        while (true) {
-            // print robot location to the brain screen
-            pros::lcd::print(0, "X: %f", chassis.getPose().x); // x
-            pros::lcd::print(1, "Y: %f", chassis.getPose().y); // y
-            pros::lcd::print(2, "Theta: %f", chassis.getPose().theta); // heading
-            pros::delay(500);
-        }
-    });
+    // pros::Task screenTask([&]() {
+    //     while (true) {
+    //         // print robot location to the brain screen
+    //         pros::lcd::print(0, "X: %f", chassis.getPose().x); // x
+    //         pros::lcd::print(1, "Y: %f", chassis.getPose().y); // y
+    //         pros::lcd::print(2, "Theta: %f", chassis.getPose().theta); // heading
+    //         pros::delay(500);
+    //     }
+    // });
 }
 
 /**
@@ -168,17 +171,17 @@ void autonomous() {
         chassis.arcade(50,0); // go forward
         pros::delay(500);
         chassis.arcade(0,0); // stop
-        // claw_piston2.extend(); // claw up
-        // claw_piston2_state = 1;
+        claw_piston2.extend(); // claw up
+        claw_piston2_state = 1;
         pros::delay(300); 
         claw_piston.retract(); // claw open
         claw_piston_state = 0;
         pros::delay(300);
-        // claw_piston2.retract(); // claw down
-        // claw_piston2_state = 0;
+        claw_piston2.retract(); // claw down
+        claw_piston2_state = 0;
         pros::delay(300);
-        intake_piston.extend(); // intake open
-        intake_piston_state = 1;
+        // intake_piston.extend(); // intake open
+        // intake_piston_state = 1;
         chassis.arcade(-50,0); // go back
         pros::delay(700);
         chassis.arcade(0,0); // stop
@@ -186,8 +189,8 @@ void autonomous() {
         intake_motor.move(70); // intake roller spin
         pros::delay(800);
         intake_motor.move(0); // intake roller stop
-        intake_piston.retract(); // intake close
-        intake_piston_state = 0;
+        // intake_piston.retract(); // intake close
+        // intake_piston_state = 0;
         pros::delay(300);
         claw_piston.extend(); // claw close
         claw_piston_state = 1;
@@ -199,15 +202,15 @@ void autonomous() {
         pros::delay(800);
         chassis.arcade(0,0); // stop
         // cascade up claw open (again)
-        // claw_piston2.extend(); // claw up
-        // claw_piston2_state = 1;
+        claw_piston2.extend(); // claw up
+        claw_piston2_state = 1;
         pros::delay(300);
         claw_piston.retract(); // claw open
         claw_piston_state = 0;
         pros::delay(300);
         chassis.setPose(-23.55,-55.15,0);
-        // claw_piston2.retract(); // claw down
-        // claw_piston2_state = 0;
+        claw_piston2.retract(); // claw down
+        claw_piston2_state = 0;
         pros::delay(300);
         cascade_motor.move_absolute(0, 100); // cascade down
         cascade_motor2.move_absolute(0, 100); // cascade down
@@ -226,17 +229,17 @@ void autonomous() {
         chassis.arcade(50,0); // go forward
         pros::delay(500);
         chassis.arcade(0,0); // stop
-        // claw_piston2.extend(); // claw up
-        // claw_piston2_state = 1;
+        claw_piston2.extend(); // claw up
+        claw_piston2_state = 1;
         pros::delay(300); 
         claw_piston.retract(); // claw open
         claw_piston_state = 0;
         pros::delay(300);
-        // claw_piston2.retract(); // claw down
-        // claw_piston2_state = 0;
+        claw_piston2.retract(); // claw down
+        claw_piston2_state = 0;
         pros::delay(300);
-        intake_piston.extend(); // intake open
-        intake_piston_state = 1;
+        // intake_piston.extend(); // intake open
+        // intake_piston_state = 1;
         chassis.arcade(-50,0); // go back
         pros::delay(700);
         chassis.arcade(0,0); // stop
@@ -244,8 +247,8 @@ void autonomous() {
         intake_motor.move(70); // intake roller spin
         pros::delay(800);
         intake_motor.move(0); // intake roller stop
-        intake_piston.retract(); // intake close
-        intake_piston_state = 0;
+        // intake_piston.retract(); // intake close
+        // intake_piston_state = 0;
         pros::delay(300);
         claw_piston.extend(); // claw close
         claw_piston_state = 1;
@@ -257,15 +260,15 @@ void autonomous() {
         pros::delay(800);
         chassis.arcade(0,0); // stop
         // cascade up claw open (again)
-        // claw_piston2.extend(); // claw up
-        // claw_piston2_state = 1;
+        claw_piston2.extend(); // claw up
+        claw_piston2_state = 1;
         pros::delay(300);
         claw_piston.retract(); // claw open
         claw_piston_state = 0;
         pros::delay(300);
         chassis.setPose(23.55,-55.15,0);
-        // claw_piston2.retract(); // claw down
-        // claw_piston2_state = 0;
+        claw_piston2.retract(); // claw down
+        claw_piston2_state = 0;
         pros::delay(300);
         cascade_motor.move_absolute(0, 100); // cascade down
         cascade_motor2.move_absolute(0, 100); // cascade down
@@ -284,17 +287,17 @@ void autonomous() {
         chassis.arcade(50,0); // go forward
         pros::delay(500);
         chassis.arcade(0,0); // stop
-        // claw_piston2.extend(); // claw up
-        // claw_piston2_state = 1;
+        claw_piston2.extend(); // claw up
+        claw_piston2_state = 1;
         pros::delay(300); 
         claw_piston.retract(); // claw open
         claw_piston_state = 0;
         pros::delay(300);
-        // claw_piston2.retract(); // claw down
-        // claw_piston2_state = 0;
+        claw_piston2.retract(); // claw down
+        claw_piston2_state = 0;
         pros::delay(300);
-        intake_piston.extend(); // intake open
-        intake_piston_state = 1;
+        // intake_piston.extend(); // intake open
+        // intake_piston_state = 1;
         chassis.arcade(-50,0); // go back
         pros::delay(700);
         chassis.arcade(0,0); // stop
@@ -302,8 +305,8 @@ void autonomous() {
         intake_motor.move(70); // intake roller spin
         pros::delay(800);
         intake_motor.move(0); // intake roller stop
-        intake_piston.retract(); // intake close
-        intake_piston_state = 0;
+        // intake_piston.retract(); // intake close
+        // intake_piston_state = 0;
         pros::delay(300);
         claw_piston.extend(); // claw close
         claw_piston_state = 1;
@@ -315,15 +318,15 @@ void autonomous() {
         pros::delay(800);
         chassis.arcade(0,0); // stop
         // cascade up claw open (again)
-        // claw_piston2.extend(); // claw up
-        // claw_piston2_state = 1;
+        claw_piston2.extend(); // claw up
+        claw_piston2_state = 1;
         pros::delay(300);
         claw_piston.retract(); // claw open
         claw_piston_state = 0;
         pros::delay(300);
         chassis.setPose(-23.55,-55.15,0);
-        // claw_piston2.retract(); // claw down
-        // claw_piston2_state = 0;
+        claw_piston2.retract(); // claw down
+        claw_piston2_state = 0;
         pros::delay(300);
         cascade_motor.move_absolute(0, 100); // cascade down
         cascade_motor2.move_absolute(0, 100); // cascade down
@@ -357,9 +360,9 @@ void opcontrol() {
 
 
 	while (true) {
-		pros::lcd::print(0, "%d %d %d", (pros::lcd::read_buttons() & LCD_BTN_LEFT) >> 2,
-		                 (pros::lcd::read_buttons() & LCD_BTN_CENTER) >> 1,
-		                 (pros::lcd::read_buttons() & LCD_BTN_RIGHT) >> 0);  // Prints status of the emulated screen LCDs
+		// pros::lcd::print(0, "%d %d %d", (pros::lcd::read_buttons() & LCD_BTN_LEFT) >> 2,
+		//                  (pros::lcd::read_buttons() & LCD_BTN_CENTER) >> 1,
+		//                  (pros::lcd::read_buttons() & LCD_BTN_RIGHT) >> 0);  // Prints status of the emulated screen LCDs
 
 		// double arcade control scheme
 		int leftY = master.get_analog(pros::E_CONTROLLER_ANALOG_LEFT_Y);
@@ -377,7 +380,7 @@ void opcontrol() {
             cascade_motor.move(0); // cascade stop
             cascade_motor2.move(0); // cascade stop
         }
-        if(master.get_digital(pros::E_CONTROLLER_DIGITAL_B)){
+        if(master.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_B)){
             if(claw_piston_state == 1){
                 claw_piston.retract(); // claw open
                 claw_piston_state = 0;
@@ -396,26 +399,26 @@ void opcontrol() {
         else{
             intake_motor.move(0); // intake roller stop
         }
-        // if(master.get_digital(pros::E_CONTROLLER_DIGITAL_A)){
-        //     if(claw_piston2_state == 1){
-        //         claw_piston2.retract(); // claw down
-        //         claw_piston2_state = 0;
-        //     }
-        //     else{
-        //         claw_piston2.extend(); // claw up
-        //         claw_piston2_state = 1;
-        //     }
-        // }
-        if(master.get_digital(pros::E_CONTROLLER_DIGITAL_X)){
-            if(intake_piston_state == 1){
-                intake_piston.retract(); // intake close
-                intake_piston_state = 0;
+        if(master.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_A)){
+            if(claw_piston2_state == 1){
+                claw_piston2.retract(); // claw down
+                claw_piston2_state = 0;
             }
             else{
-                intake_piston.extend(); // intake open
-                intake_piston_state = 1;
+                claw_piston2.extend(); // claw up
+                claw_piston2_state = 1;
             }
         }
+        // if(master.get_digital(pros::E_CONTROLLER_DIGITAL_X)){
+        //     if(intake_piston_state == 1){
+        //         intake_piston.retract(); // intake close
+        //         intake_piston_state = 0;
+        //     }
+        //     else{
+        //         intake_piston.extend(); // intake open
+        //         intake_piston_state = 1;
+        //     }
+        // }
         // delay to save resources
         pros::delay(15);                         // Run for 5 ms then update
 	}
