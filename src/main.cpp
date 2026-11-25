@@ -11,7 +11,7 @@ pros::MotorGroup
 pros::MotorGroup right_mg(
     {9, 10},
     pros::MotorGearset::blue); // Right: port 9 normal, port 10 reversed
-lemlib::Drivetrain drivetrain(&left_mg, &right_mg, 13.5,
+lemlib::Drivetrain drivetrain(&left_mg, &right_mg, 11.4,
                               lemlib::Omniwheel::NEW_325, 100, 2);
 pros::Imu imu(11);
 pros::Rotation
@@ -29,7 +29,7 @@ lemlib::OdomSensors sensors(&vertical_wheel, nullptr, &horizontal_wheel,
                             nullptr, &imu);
 // lateral PID controller
 lemlib::ControllerSettings
-    lateral_controller(15, // proportional gain (kP)
+    lateral_controller(10, // proportional gain (kP)
                        0,  // integral gain (kI)
                        25, // derivative gain (kD)
                        0,  // anti windup
@@ -406,14 +406,20 @@ void opcontrol() {
         master.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_Y);
     const bool decrease =
         master.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_A);
-    if (increase || decrease) {
+    const bool increase_large =
+        master.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_RIGHT);
+    const bool decrease_large =
+        master.get_digital_new_press(pros::E_CONTROLLER_DIGITAL_LEFT);
+    if (increase || decrease || increase_large || decrease_large) {
       auto &settings = tuning_settings(autonomous_selector);
       float *gain = selected_gain == 0   ? &settings.kP
                     : selected_gain == 1 ? &settings.kI
                                          : &settings.kD;
       const float step = selected_gain == 1 ? 0.01f : 0.1f;
-      *gain = std::fmax(
-          0.0f, std::round((*gain + (increase ? step : -step)) / step) * step);
+      const float change = step * ((increase ? 1 : 0) - (decrease ? 1 : 0) +
+                                   (increase_large ? 10 : 0) -
+                                   (decrease_large ? 10 : 0));
+      *gain = std::fmax(0.0f, std::round((*gain + change) / step) * step);
       screen_ticks = 0;
     }
     // X runs the selected test only without a field controller connected.
